@@ -1,5 +1,5 @@
 # blog-api
 Django rest api
 
-##ERD
+## ERD
 ![ERD](docs/erd.png)

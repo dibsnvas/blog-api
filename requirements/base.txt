@@ -2,3 +2,4 @@ Django
 djangorestframework
 python-decouple
 djangorestframework-simplejwt
+django-unfold

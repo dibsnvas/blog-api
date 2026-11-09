@@ -34,6 +34,7 @@ class Post(models.Model):
         Category,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
     )
     tags = models.ManyToManyField(
         Tag,

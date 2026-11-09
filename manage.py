@@ -1,11 +1,14 @@
+#!/usr/bin/env python
 import os
 import sys
 
 
 def main():
+    from settings.conf import BLOG_ENV_ID
+
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE",
-        "settings.env.local",
+        f"settings.env.{BLOG_ENV_ID}",
     )
 
     try:

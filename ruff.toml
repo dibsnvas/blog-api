@@ -1,0 +1,5 @@
+extend-exclude = ["*/migrations/*"]
+
+[lint]
+# Django declares config as mutable class attributes (REQUIRED_FIELDS, prepopulated_fields, ...).
+ignore = ["RUF012"]

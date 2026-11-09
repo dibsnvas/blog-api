@@ -51,6 +51,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["first_name", "last_name"]
+
+    def clean(self) -> None:
+        super().clean()
+        self.email = User.objects.normalize_email(self.email).lower()
 
     def __str__(self) -> str:
         return self.email

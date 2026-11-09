@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# settings/env/ holds the settings modules (local.py, prod.py) — it must be committed.
+# The "ENV/" rule above also matches it on macOS (case-insensitive filesystem).
+!settings/env/
