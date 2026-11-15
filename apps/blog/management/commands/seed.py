@@ -1,12 +1,13 @@
-
 import random
 import time
 from typing import Any
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.db import transaction
+from django.utils import timezone
 from django.utils.text import slugify
 from faker import Faker
 
@@ -27,6 +28,11 @@ MAX_TAGS_PER_POST = 5
 POST_PARAGRAPHS = 3
 MAX_COMMENT_SENTENCES = 3
 POST_TITLE_WORDS = 6
+DATE_RANGE_DAYS = 365
+SECONDS_IN_DAY = 24*60*60
+EDITED_RATIO = 0.3
+MIN_EDIT_DAYS = 1
+MAX_EDIT_DAYS = 30
 
 CATEGORY_NAMES = [
     "Python",
@@ -234,9 +240,9 @@ class Command(BaseCommand):
 
         return len(tags)
 
-    def create_posts(self, count: int) -> int:
+    def create_posts(self, count: int) -> list[Post]:
         if count == 0:
-            return 0
+            return []
 
         authors = list(User.objects.all())
         categories = list(Category.objects.all())
@@ -324,19 +330,48 @@ class Command(BaseCommand):
 
             post.tags.set(selected_tags)
 
-        return len(posts)
+        self.set_post_dates(posts)
 
-    def create_comments(self, count: int) -> int:
+        return posts
+
+    def set_post_dates(self, posts: list[Post]) -> None:
+        now = timezone.now()
+
+        for post in posts:
+            seconds_ago = random.randint(
+                0,
+                DATE_RANGE_DAYS * SECONDS_IN_DAY,
+            )
+            post.created_at=now - timedelta(seconds=seconds_ago)
+            if random.random() < EDITED_RATIO:
+                edit_days = random.randint(
+                    MIN_EDIT_DAYS,
+                    MAX_EDIT_DAYS,
+                )
+                post.updated_at = min(
+                    post.created_at + timedelta(days=edit_days),
+                    now,
+                )
+            else:
+                post.updated_at = post.created_at
+
+        Post.objects.bulk_update(
+            posts,
+            ["created_at", "updated_at"],
+        )
+
+
+    def create_comments(self, count: int, posts: list[Post],) -> int:
         if count == 0:
             return 0
 
         authors = list(User.objects.all())
 
-        published_posts = list(
-            Post.objects.filter(
-                status=Post.Status.PUBLISHED
-            )
-        )
+        published_posts = [
+            post
+            for post in posts
+            if post.status == Post.Status.PUBLISHED
+        ]
 
         if not authors:
             raise CommandError(
@@ -370,8 +405,20 @@ class Command(BaseCommand):
             )
 
         Comment.objects.bulk_create(comments)
+        
+        self.set_comment_dates(comments)
 
         return len(comments)
+    def set_comment_dates(self, comments: list[Comment]) -> None:
+        now = timezone.now()
+
+        for comment in comments:
+            post_created_at = comment.post.created_at
+            comment.created_at = (
+                post_created_at
+                + (now - post_created_at) * random.random()
+            )
+        Comment.objects.bulk_update(comments, ["created_at"])
 
     def handle(
         self,
@@ -423,12 +470,13 @@ class Command(BaseCommand):
 
             created_tags = self.create_tags()
 
-            created_posts = self.create_posts(
+            posts = self.create_posts(
                 posts_count
             )
 
             created_comments = self.create_comments(
-                comments_count
+                comments_count,
+                posts,
             )
 
         elapsed = time.perf_counter() - start_time
@@ -438,7 +486,7 @@ class Command(BaseCommand):
                 f"Users:       {created_users} created\n"
                 f"Categories:  {created_categories} created\n"
                 f"Tags:        {created_tags} created\n"
-                f"Posts:       {created_posts} created\n"
+                f"Posts:       {len(posts)} created\n"
                 f"Comments:    {created_comments} created\n"
                 f"Done in {elapsed:.2f} seconds"
             )
