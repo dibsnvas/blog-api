@@ -1,7 +1,7 @@
 import random
 import time
-from typing import Any
 from datetime import timedelta
+from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
@@ -405,7 +405,7 @@ class Command(BaseCommand):
             )
 
         Comment.objects.bulk_create(comments)
-        
+
         self.set_comment_dates(comments)
 
         return len(comments)
